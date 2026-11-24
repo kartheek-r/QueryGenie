@@ -69,6 +69,8 @@ QueryGenie/
 
 ![Guardrail](1000384444.jpg)
 
+
+
 ## 💬 Try These Questions
 
 - Show students with marks greater than 85
