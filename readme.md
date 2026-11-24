@@ -1,83 +1,90 @@
 # 🧞 QueryGenie
 
-> An AI-powered **Natural Language to SQL** application built with **Google Gemini and SQLite** that converts plain English questions into SQL queries and instantly retrieves database results.
+🔗 **Live Demo:** https://querygenie-r8llvbbfg3zjsvkeqx9egh.streamlit.app/
+
+> Ask a database question in plain English. An **AI agent** built on Google Gemini reads the schema, writes SQL, runs it safely, and fixes its own errors, with every step visible.
 
 ---
 
-## 📌 Project Overview
+## 📌 Overview
 
-Writing SQL takes time, even for people who know it well — and it's a hard barrier for anyone who doesn't. QueryGenie removes that barrier: type a question in plain English, and it generates the correct SQL query, runs it against a live SQLite database, and returns the results — no SQL knowledge required.
-
----
+Writing SQL is a barrier for anyone who doesn't know it. QueryGenie removes that barrier, and it does it with an **agent** instead of a single prompt. Gemini is given two tools, decides when to use them, sees the results of its own queries, and corrects itself when a query fails.
 
 ## ✨ Features
 
-- 💬 Ask database questions in **plain English**
-- 🤖 **AI-powered SQL generation** using Google Gemini
-- 🗄️ Executes queries live against a **SQLite** database
-- 📊 Instant, readable results — no manual query writing
-- 🖥️ Simple, interactive **Streamlit** UI
-
----
+- 💬 Ask questions in **plain English**
+- 🛠️ **Tool calling:** Gemini calls `get_schema()` and `run_sql()` on its own
+- 🧠 **Schema understanding:** table structure is read from the database automatically, not hard-coded
+- 🔁 **Self-correction loop:** if a query fails, the error goes back to the model, which fixes the SQL and retries (up to 4 attempts)
+- 🛡️ **Guardrails:** only a single read-only `SELECT` is allowed, writes are blocked, and the database opens in read-only mode
+- 📊 Results as a table, plus an automatic bar chart when the data fits
+- 🔍 **Agent steps** panel showing every SQL attempt and its outcome
+- ☁️ Deployed on Streamlit Cloud
 
 ## 🏗️ How It Works
 
 ```
-User asks a question in English
+User question (English)
         ↓
-Gemini  →  Converts question into a SQL query using schema context
+Gemini 3.5 Flash (function calling)
+   ├─ get_schema()  → reads CREATE TABLE statements from SQLite
+   └─ run_sql(query)
+         ├─ Guardrail: single SELECT only, blocked keywords rejected
+         ├─ Executes on a read-only SQLite connection
+         └─ Returns rows, or the error message
         ↓
-SQLite  →  Executes the generated SQL query
+Error? → model reads it, fixes the SQL, retries (max 4 attempts)
         ↓
-Results displayed in Streamlit UI
+Answer + SQL + results table + chart + agent steps
 ```
-
----
 
 ## 🛠️ Tech Stack
 
-| Component        | Technology           |
-|-------------------|-----------------------|
-| 🖥️ Frontend / UI  | Streamlit             |
-| 🤖 AI Model        | Google Gemini         |
-| 🗄️ Database        | SQLite                |
-| 🔐 Env Management  | python-dotenv         |
-
----
+| Component | Technology |
+|---|---|
+| UI | Streamlit |
+| LLM | Google Gemini 3.5 Flash (`google-genai` SDK, function calling) |
+| Database | SQLite (opened read-only) |
+| Data handling | pandas |
+| Hosting | Streamlit Cloud |
 
 ## 📂 Project Structure
 
 ```
 QueryGenie/
-│
-├── app.py              # Main Streamlit application
-├── sqlite.py           # Database connection & query execution
-├── student.db           # Sample SQLite database
-├── requirements.txt     # Python dependencies
-├── .gitignore
-└── README.md
+├── app.py             # Streamlit app + agent loop + guardrails
+├── sqlite.py          # Sample database setup
+├── student.db         # Sample SQLite database (STUDENT table)
+├── requirements.txt
+└── readme.md
 ```
 
----
+## 🖼️ Screenshots
 
-## 🖼️ Project UI
+**Question answered with SQL, results, and chart**
 
-*Add a screenshot of the app here, e.g.:*
-`![QueryGenie UI](./assets/querygenie-ui.jpeg)`
+![QueryGenie answer](demo1.jpg)
 
----
+**Guardrail refusing a delete request**
 
-## ▶️ How to Run Locally
+![Guardrail](demo2.jpg)
 
-### 1. Clone the Repository
+## 💬 Try These Questions
 
+- Show students with marks greater than 85
+- Count total students
+- Display student names in descending order of marks
+- Delete all students *(refused by the guardrail)*
+
+## ▶️ Run Locally
+
+**1. Clone the repo**
 ```bash
 git clone https://github.com/kartheek-r/QueryGenie.git
 cd QueryGenie
 ```
 
-### 2. Create a Virtual Environment
-
+**2. Create a virtual environment**
 ```bash
 python -m venv venv
 
@@ -88,64 +95,47 @@ venv\Scripts\activate
 source venv/bin/activate
 ```
 
-### 3. Install Dependencies
-
+**3. Install dependencies**
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Set Up API Key
+**4. Add your API key**
 
-Create a `.env` file in the root folder:
-
+Get a free key from [Google AI Studio](https://aistudio.google.com/), then create `.streamlit/secrets.toml`:
+```toml
+GOOGLE_API_KEY = "your_key_here"
 ```
-GOOGLE_API_KEY=your_google_gemini_api_key_here
-```
+(Or set an environment variable named `GOOGLE_API_KEY`.)
 
-> 🔑 Get your free API key at [Google AI Studio](https://aistudio.google.com/)
-
-### 5. Run the App
-
+**5. Run**
 ```bash
 streamlit run app.py
 ```
 
----
+## ☁️ Deploy on Streamlit Cloud
 
-## 💬 Sample Questions
+1. Push the repo to GitHub
+2. Go to [share.streamlit.io](https://share.streamlit.io) → **Create app**
+3. Select the repo, branch `main`, main file `app.py`
+4. Under **Advanced settings → Secrets**, add `GOOGLE_API_KEY = "your_key_here"`
+5. Deploy
 
-- Show all students
-- Show students with marks greater than 85
-- Count total students
-- Display student names in descending order
+## ⚠️ Limitations
 
----
-
-## 💡 Use Cases
-
-- 📊 Non-technical users querying a database without learning SQL
-- 🎓 Students learning how natural language maps to SQL
-- ⚡ Quick ad-hoc data lookups without opening a query editor
-
----
+- Works with the included sample database (`student.db`)
+- The guardrail uses a keyword blocklist plus a read-only connection, which is good for a demo but not a full SQL security layer
+- Results are capped at 100 rows
+- The model can still write a wrong query; the retry loop fixes errors, not wrong-but-valid logic
 
 ## 🔮 Future Improvements
 
-- 🗂️ Support for multiple/custom databases
-- ✅ SQL query validation before execution
-- 🕘 Query history
-- 📥 Export results to CSV
-
----
-
-## 🙌 Conclusion
-
-QueryGenie combines **prompt engineering** and **schema-aware SQL generation** to turn plain English into working database queries — a practical demonstration of applying LLMs to structured data access.
-
----
+- Upload or connect your own database (PostgreSQL / MySQL)
+- Schema retrieval for large databases (embed table descriptions and fetch only relevant ones)
+- Query history and CSV export
+- An evaluation set to measure query accuracy
 
 ## 👨‍💻 Author
 
 **Ryalampadu Kartheek**
-
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=flat-square&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/kartheek-ryalampadu) [![Gmail](https://img.shields.io/badge/Gmail-D14836?style=flat-square&logo=gmail&logoColor=white)](mailto:kartheekryalampadu@gmail.com) [![GitHub](https://img.shields.io/badge/GitHub-181717?style=flat-square&logo=github&logoColor=white)](https://github.com/kartheek-r)
+[LinkedIn](https://www.linkedin.com/in/kartheek-ryalampadu) · [GitHub](https://github.com/kartheek-r)
