@@ -61,13 +61,13 @@ QueryGenie/
 
 ## 🖼️ Screenshots
 
-**Question answered with SQL, results, and chart**
+**Question answered with SQL and results**
 
-![QueryGenie answer](demo1.jpg)
+![QueryGenie answer](1000384443.jpg)
 
 **Guardrail refusing a delete request**
 
-![Guardrail](demo2.jpg)
+![Guardrail](1000384444.jpg)
 
 ## 💬 Try These Questions
 
